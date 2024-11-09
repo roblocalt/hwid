@@ -1,0 +1,136 @@
+local Notification = Instance.new("ScreenGui")
+local Holder = Instance.new("Frame")
+local UIListLayout = Instance.new("UIListLayout")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+-- Create notification holder
+Notification.Name = "Notification"
+Notification.Parent = game.CoreGui
+Notification.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+Holder.Name = "Holder"
+Holder.Parent = Notification
+Holder.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Holder.BackgroundTransparency = 1
+Holder.Position = UDim2.new(1, -10, 0, 10)
+Holder.AnchorPoint = Vector2.new(1, 0)
+Holder.Size = UDim2.new(0, 243, 0, 240)
+
+UIListLayout.Parent = Holder
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 4)
+
+local function createNotificationTemplate(text, duration)
+    local Template = Instance.new("Frame")
+    local ColorBar = Instance.new("Frame")
+    local TextLabel = Instance.new("TextLabel")
+    local CopyButton = Instance.new("TextButton")
+    local HwidTextBox = Instance.new("TextBox")
+
+    Template.Name = text
+    Template.Parent = Holder
+    Template.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Template.BorderSizePixel = 0
+    Template.Size = UDim2.new(1, 0, 0, 80)
+    Template.Transparency = 1
+
+    ColorBar.Name = "ColorBar"
+    ColorBar.Parent = Template
+    ColorBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    ColorBar.BorderSizePixel = 0
+    ColorBar.Size = UDim2.new(0, 2, 0, 80)
+    ColorBar.Transparency = 1
+
+    TextLabel.Parent = Template
+    TextLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.BorderSizePixel = 0
+    TextLabel.Position = UDim2.new(0, 8, 0, 0)
+    TextLabel.Size = UDim2.new(1, -10, 0, 22)
+    TextLabel.Font = Enum.Font.Code
+    TextLabel.Text = text
+    TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TextLabel.TextSize = 12
+    TextLabel.TextStrokeTransparency = 0
+    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TextLabel.Transparency = 1
+
+    -- Create TextBox for the HWID (allows copying)
+    HwidTextBox.Parent = Template
+    HwidTextBox.Size = UDim2.new(1, -10, 0, 30)
+    HwidTextBox.Position = UDim2.new(0, 8, 0, 30)
+    HwidTextBox.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    HwidTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    HwidTextBox.TextSize = 14
+    HwidTextBox.Text = text
+    HwidTextBox.ClearTextOnFocus = false
+    HwidTextBox.TextEditable = false  -- Make it read-only
+    HwidTextBox.TextStrokeTransparency = 0
+
+    -- Copy Button
+    CopyButton.Parent = Template
+    CopyButton.Text = "Copy HWID"
+    CopyButton.Size = UDim2.new(0, 100, 0, 30)
+    CopyButton.Position = UDim2.new(0.5, -50, 0.8, 0)
+    CopyButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    CopyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CopyButton.TextSize = 14
+    CopyButton.TextStrokeTransparency = 0
+
+    return Template, ColorBar, TextLabel, CopyButton, HwidTextBox
+end
+
+function notify(text, time)
+    if time <= 0 then
+        warn("Notification duration must be greater than 0")
+        return
+    end
+
+    local Template, ColorBar, TextLabel, CopyButton, HwidTextBox = createNotificationTemplate(text, time)
+
+    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local fadeInGoal = {Transparency = 0}
+    local fadeOutGoal = {Transparency = 1}
+
+    local sizeTween = TweenService:Create(Template, tweenInfo, fadeInGoal)
+    local colorBarTween = TweenService:Create(ColorBar, tweenInfo, fadeInGoal)
+    local textTween = TweenService:Create(TextLabel, tweenInfo, fadeInGoal)
+
+    sizeTween:Play()
+    colorBarTween:Play()
+    textTween:Play()
+
+    -- Handle button click to "copy" HWID
+    CopyButton.MouseButton1Click:Connect(function()
+        -- In this case, since clipboard access is restricted, we just print the HWID
+        -- In a real implementation, this would copy to the system clipboard if possible
+        print("HWID copied to console: " .. text)
+        -- Optionally, focus the TextBox so the user can easily select and copy the HWID
+        HwidTextBox:CaptureFocus()
+    end)
+
+    -- Fade out after the specified duration
+    wait(time)
+    local fadeOutSizeTween = TweenService:Create(Template, tweenInfo, fadeOutGoal)
+    local fadeOutColorBarTween = TweenService:Create(ColorBar, tweenInfo, fadeOutGoal)
+    local fadeOutTextTween = TweenService:Create(TextLabel, tweenInfo, fadeOutGoal)
+
+    fadeOutSizeTween:Play()
+    fadeOutColorBarTween:Play()
+    fadeOutTextTween:Play()
+
+    -- Wait for fade-out to finish before removing the notification
+    fadeOutSizeTween.Completed:Wait()
+    Template:Destroy()
+end
+
+-- Get HWID (Client ID)
+local function getHWID()
+    local hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+    return hwid
+end
+
+-- Create and show the notification with HWID, set duration to 60 seconds
+local hwid = getHWID()
+notify("Your HWID: " .. hwid, 60)  -- Show the HWID for 60 seconds
